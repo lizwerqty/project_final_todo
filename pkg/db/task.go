@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const layout = "20060102"
+
 type Task struct {
 	ID      string `json:"id"`
 	Date    string `json:"date"`
@@ -30,14 +32,20 @@ func Tasks(limit int, search string) ([]*Task, error) {
 	if search == "" {
 		query = `SELECT id, date, title, comment, repeat FROM scheduler ORDER BY date LIMIT ?`
 		args = []any{limit}
-	} else if t, err := time.Parse("02.01.2006", search); err == nil {
-		query = `SELECT id, date, title, comment, repeat FROM scheduler WHERE date = ? ORDER BY date LIMIT ?`
-		args = []any{t.Format("20060102"), limit}
-	} else {
-		query = `SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE ? OR comment LIKE ? ORDER BY date LIMIT ?`
-		pattern := "%" + search + "%"
-		args = []any{pattern, pattern, limit}
 	}
+	if search != "" {
+		t, err := time.Parse("02.01.2006", search)
+		if err == nil {
+			query = `SELECT id, date, title, comment, repeat FROM scheduler WHERE date = ? ORDER BY date LIMIT ?`
+			args = []any{t.Format(layout), limit}
+		}
+		if err != nil {
+			query = `SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE ? OR comment LIKE ? ORDER BY date LIMIT ?`
+			pattern := "%" + search + "%"
+			args = []any{pattern, pattern, limit}
+		}
+	}
+
 	rows, err := DB.Query(query, args...)
 	if err != nil {
 		return nil, err

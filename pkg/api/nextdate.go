@@ -7,9 +7,14 @@ import (
 	"strings"
 	"time"
 )
+
 const layout = "20060102"
 
 func NextDateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
 	nowStr := r.FormValue("now")
 	date := r.FormValue("date")
@@ -33,8 +38,10 @@ func NextDateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	w.Write([]byte(result))
+	_, err = w.Write([]byte(result))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {

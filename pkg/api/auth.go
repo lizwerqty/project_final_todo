@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -18,24 +17,26 @@ type SignInRequest struct {
 
 func signInHandler(w http.ResponseWriter, r *http.Request) {
 	var req SignInRequest
-	defer r.Body.Close()
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	pswrd := os.Getenv("TODO_PASSWORD")
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	pswrd := todoPassword
 	if pswrd != req.Password {
-		w.WriteHeader(http.StatusUnauthorized)
-		writeJSON(w, map[string]string{"error": "Неверный пароль"})
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Неверный пароль"})
 		return
 	}
 	res, err := tokenHelper(pswrd)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	writeJSON(w, map[string]string{"token": res})
+	writeJSON(w, http.StatusOK, map[string]string{"token": res})
 }
 
 func hashHelper(s string) string {
@@ -90,8 +91,7 @@ func tokenValidate(tokenString string, password string) (bool, error) {
 
 func auth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		pass := os.Getenv("TODO_PASSWORD")
-		if len(pass) > 0 {
+		if len(todoPassword) > 0 {
 			var jwt string
 			cookie, err := r.Cookie("token")
 			if err == nil {
@@ -99,7 +99,7 @@ func auth(next http.HandlerFunc) http.HandlerFunc {
 			}
 			var valid bool
 			if jwt != "" {
-				ok, err := tokenValidate(jwt, pass)
+				ok, err := tokenValidate(jwt, todoPassword)
 				if err == nil && ok {
 					valid = true
 				}

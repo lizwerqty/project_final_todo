@@ -15,7 +15,8 @@ func Run() {
 		port = envPort
 	}
 
-	api.Init()
+	password := os.Getenv("TODO_PASSWORD")
+	api.Init(password)
 
 	webDir := "./web"
 

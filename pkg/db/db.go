@@ -36,9 +36,17 @@ func Init() error {
 	if install {
 		_, err = DB.Exec(schema)
 		if err != nil {
+			DB.Close()
 			return err
 		}
 	}
 
 	return nil
+}
+
+func Close() error {
+	if DB == nil {
+		return nil
+	}
+	return DB.Close()
 }
